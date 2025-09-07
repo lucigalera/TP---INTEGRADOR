@@ -1,0 +1,145 @@
+# integrador_alumnos.py
+"""
+TP Integrador – Registro y Análisis de Alumnos
+Implementación según consigna (listas/diccionarios + CSV + Pandas).
+Autor: (tu nombre)
+"""
+
+import csv
+import pandas as pd
+from typing import List, Dict
+
+CSV_FILENAME = "alumnos.csv"
+
+def registrar_alumnos() -> List[Dict]:
+    """
+    Pide al usuario que ingrese alumnos (nombre, curso, nota).
+    Devuelve una lista de diccionarios: [{"nombre":..., "curso":..., "nota":...}, ...]
+    """
+    alumnos = []
+    print("** Registro de alumnos **")
+    while True:
+        nombre = input("Nombre (dejar vacío para terminar): ").strip()
+        if nombre == "":
+            break
+        curso = input("Curso (ej: 6A): ").strip()
+        # validar nota
+        while True:
+            nota_str = input("Nota (0-10): ").strip()
+            try:
+                nota = float(nota_str)
+                if 0 <= nota <= 10:
+                    break
+                else:
+                    print("  -> La nota debe ser entre 0 y 10.")
+            except ValueError:
+                print("  -> Ingresá un número válido para la nota.")
+        alumno = {"nombre": nombre, "curso": curso, "nota": nota}
+        alumnos.append(alumno)
+        print(f"  -> Registrado: {alumno}")
+    print(f"Total alumnos registrados en memoria: {len(alumnos)}\n")
+    return alumnos
+
+def guardar_datos(alumnos: List[Dict], filename: str = CSV_FILENAME) -> None:
+    """
+    Guarda la lista de diccionarios en un archivo CSV usando pandas (to_csv).
+    """
+    if len(alumnos) == 0:
+        print("No hay datos para guardar.")
+        return
+    df = pd.DataFrame(alumnos)
+    # Guardamos con index False para evitar columna índice
+    df.to_csv(filename, index=False, encoding="utf-8")
+    print(f"Datos guardados en '{filename}'. (mostrar preview)")
+    print(df.head(), "\n")  # depuración: mostrar primeras filas
+
+def leer_datos(filename: str = CSV_FILENAME) -> pd.DataFrame:
+    """
+    Lee el archivo CSV y devuelve un DataFrame.
+    """
+    try:
+        df = pd.read_csv(filename, encoding="utf-8")
+        print(f"Archivo '{filename}' leído correctamente. (shape = {df.shape})")
+        print(df.head(), "\n")  # depuración
+        return df
+    except FileNotFoundError:
+        print(f"El archivo '{filename}' no existe. Devuelvo DataFrame vacío.")
+        return pd.DataFrame(columns=["nombre", "curso", "nota"])
+
+def analizar_datos(df: pd.DataFrame) -> None:
+    """
+    Realiza los análisis pedidos:
+     - Cantidad de alumnos por curso (Series)
+     - Promedio de notas por curso
+     - Lista de aprobados (nota >= 6)
+     - Nombre del primer alumno registrado
+    """
+    if df.empty:
+        print("DataFrame vacío: no hay datos para analizar.")
+        return
+
+    # Asegurarnos que nota sea numérica
+    df["nota"] = pd.to_numeric(df["nota"], errors="coerce")
+
+    # 1) Cantidad de alumnos por curso
+    cantidad_por_curso = df["curso"].value_counts()
+    print("Cantidad de alumnos por curso (Series):")
+    print(cantidad_por_curso)
+    print()
+
+    # 2) Promedio de notas por curso
+    promedio_por_curso = df.groupby("curso")["nota"].mean()
+    print("Promedio de notas por curso:")
+    print(promedio_por_curso)
+    print()
+
+    # 3) Lista de aprobados (nota >= 6)
+    aprobados_df = df[df["nota"] >= 6].copy()
+    aprobados_lista = aprobados_df[["nombre", "curso", "nota"]].to_dict(orient="records")
+    print(f"Lista de aprobados (nota >= 6). Total aprobados: {len(aprobados_lista)}")
+    for a in aprobados_lista:
+        print(f"  - {a['nombre']} | Curso: {a['curso']} | Nota: {a['nota']}")
+    print()
+
+    # 4) Nombre del primer alumno registrado (según el archivo / orden del DataFrame)
+    # Si queremos el primer ingresado originalmente, asumimos el orden de filas en el CSV.
+    primer_alumno = df.iloc[0]["nombre"] if not df.empty else None
+    print(f"Primer alumno registrado: {primer_alumno}")
+    print()
+
+def main():
+    print("=== Programa integrador: Registro y Análisis de Alumnos ===")
+    # Opción: permitir al usuario elegir entre cargar nuevos alumnos o usar archivo existente
+    while True:
+        print("Opciones:")
+        print("  1) Registrar alumnos nuevos y guardar en CSV")
+        print("  2) Leer CSV existente y analizar datos")
+        print("  3) Registrar algunos alumnos de ejemplo (datos de prueba) y guardar")
+        print("  4) Salir")
+        opcion = input("Elegí una opción (1-4): ").strip()
+        if opcion == "1":
+            alumnos = registrar_alumnos()
+            guardar_datos(alumnos)
+        elif opcion == "2":
+            df = leer_datos()
+            analizar_datos(df)
+        elif opcion == "3":
+            # Datos de ejemplo rápidos para pruebas
+            ejemplo = [
+                {"nombre": "Ana", "curso": "6A", "nota": 8},
+                {"nombre": "Juan", "curso": "6A", "nota": 5.5},
+                {"nombre": "María", "curso": "6B", "nota": 9},
+                {"nombre": "Luis", "curso": "6B", "nota": 6},
+                {"nombre": "Sofía", "curso": "6C", "nota": 4.5},
+            ]
+            print("Cargando datos de ejemplo...")
+            guardar_datos(ejemplo)
+        elif opcion == "4":
+            print("Saliendo. ¡Hasta luego!")
+            break
+        else:
+            print("Opción inválida. Intentá nuevamente.")
+        print("-" * 40)
+
+if __name__ == "__main__":
+    main()
